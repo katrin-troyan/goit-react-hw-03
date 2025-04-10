@@ -1,49 +1,47 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import Description from './components/Description/Description';
-import Options from './components/Options/Options';
-import Feedback from './components/Feedback/Feedback';
-import Notification from './components/Notification/Notification';
+import { nanoid } from 'nanoid';
+import ContactList from './components/ContactList/ContactList';
+import contactsData from './components/ContactList/contactsData.json';
+import SearchBox from './components/SearchBox/SearchBox';
+import ContactForm from './components/ContactForm/ContactForm';
 
 export default function App() {
-  const [feedback, setFeedback] = useState(() => {
-    const savedFeedback = localStorage.getItem('feedback');
-    return savedFeedback
-      ? JSON.parse(savedFeedback)
-      : { good: 0, neutral: 0, bad: 0 };
-  });
+  const savedContacts = JSON.parse(localStorage.getItem('contacts'));
+
+  const [contacts, setContacts] = useState(savedContacts || contactsData);
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('feedback', JSON.stringify(feedback));
-  }, [feedback]);
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-  const updateFeedback = feedbackType => {
-    if (feedbackType === 'reset') {
-      setFeedback({ good: 0, neutral: 0, bad: 0 });
-    } else {
-      setFeedback(prevFeedback => ({
-        ...prevFeedback,
-        [feedbackType]: prevFeedback[feedbackType] + 1,
-      }));
-    }
+  const handleFilterChange = event => {
+    setFilter(event.target.value);
   };
 
-  const totalFeedback = feedback.good + feedback.neutral + feedback.bad;
-  const positiveFeedback = Math.round((feedback.good / totalFeedback) * 100);
+  const filteredContacts = contacts.filter(contact =>
+    contact.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const handleAddContact = newContact => {
+    const contactToAdd = {
+      ...newContact,
+      id: nanoid(),
+    };
+    setContacts(prev => [...prev, contactToAdd]);
+  };
+
+  const handleDeleteContact = idToDelete => {
+    setContacts(prev => prev.filter(contact => contact.id !== idToDelete));
+  };
 
   return (
-    <>
-      <Description />
-      <Options updateFeedback={updateFeedback} totalFeedback={totalFeedback} />
-      {totalFeedback > 0 ? (
-        <Feedback
-          feedback={feedback}
-          totalFeedback={totalFeedback}
-          positiveFeedback={positiveFeedback}
-        />
-      ) : (
-        <Notification message="No feedback yet" />
-      )}
-    </>
+    <div className="container">
+      <h1>Phonebook</h1>
+      <ContactForm onAddContact={handleAddContact} />
+      <SearchBox onChange={handleFilterChange} />
+      <ContactList contacts={filteredContacts} onDelete={handleDeleteContact} />
+    </div>
   );
 }
